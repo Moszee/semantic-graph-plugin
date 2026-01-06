@@ -1,0 +1,258 @@
+
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     22:51                src
+d-----        05.01.2026     22:39                target
+-a----        05.01.2026     22:34          13093 .output.txt
+-a----        04.01.2026     22:51           2324 pom.xml
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:13                main
+d-----        04.01.2026     22:42                test
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\main
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     22:52                java
+d-----        04.01.2026     23:13                resources
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\main\java
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     22:49                org
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\main\java\or
+    g
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     22:49                szpax
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\main\java\or
+    g\szpax
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     22:49                intentgraph
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\main\java\or
+    g\szpax\intentgraph
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:19                library
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\main\java\or
+    g\szpax\intentgraph\library
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:17                client
+d-----        04.01.2026     23:17                delta
+d-----        04.01.2026     23:18                internal
+d-----        04.01.2026     23:17                model
+-a----        04.01.2026     23:19          13622 IntentGraphLibrary.java
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\main\java\or
+    g\szpax\intentgraph\library\client
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        04.01.2026     23:17            166 LLMClient.java
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\main\java\or
+    g\szpax\intentgraph\library\delta
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        04.01.2026     23:17            307 DeltaOperation.java
+-a----        04.01.2026     23:17            148 DeltaOperationType.java
+-a----        04.01.2026     23:17            311 IntentGraphDelta.java
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\main\java\or
+    g\szpax\intentgraph\library\internal
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        04.01.2026     23:18           3302 GraphIndex.java
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\main\java\or
+    g\szpax\intentgraph\library\model
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        04.01.2026     23:17            112 EntryPoint.java
+-a----        04.01.2026     23:17            117 EntryPointKind.java
+-a----        04.01.2026     23:17            232 IntentGraph.java
+-a----        04.01.2026     23:17           1066 IntentNode.java
+-a----        04.01.2026     23:17             94 NodeReference.java
+-a----        04.01.2026     23:17            118 NodeType.java
+-a----        04.01.2026     23:17            255 ValidationResult.java
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\main\resourc
+    es
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:13                prompts
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\main\resourc
+    es\prompts
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        04.01.2026     23:13            957 system-prompt.txt
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\test
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     22:52                java
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\test\java
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     22:52                org
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\test\java\or
+    g
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     22:52                szpax
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\test\java\or
+    g\szpax
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     22:52                intentgraph
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\test\java\or
+    g\szpax\intentgraph
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:18                library
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\src\test\java\or
+    g\szpax\intentgraph\library
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        04.01.2026     23:18           7192 IntentGraphLibraryTest.java
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:18                classes
+d-----        04.01.2026     22:53                generated-sources
+d-----        04.01.2026     22:53                generated-test-sources
+d-----        05.01.2026     22:39                maven-archiver
+d-----        05.01.2026     22:39                maven-status
+d-----        04.01.2026     23:18                test-classes
+-a----        05.01.2026     22:39          25436 library-1.0-SNAPSHOT.jar
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\classes
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:18                org
+d-----        04.01.2026     23:14                prompts
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\classes\o
+    rg
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:18                szpax
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\classes\o
+    rg\szpax
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:18                intentgraph
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\classes\o
+    rg\szpax\intentgraph
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:18                library
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\classes\o
+    rg\szpax\intentgraph\library
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:18                client
+d-----        04.01.2026     23:18                delta
+d-----        04.01.2026     23:18                internal
+d-----        04.01.2026     23:18                model
+-a----        05.01.2026     22:39           1027 IntentGraphLibrary$1.class
+-a----        05.01.2026     22:39          18278 IntentGraphLibrary.class
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\classes\o
+    rg\szpax\intentgraph\library\client
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        05.01.2026     22:39            288 LLMClient.class
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\classes\o
+    rg\szpax\intentgraph\library\delta
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        05.01.2026     22:39           2543 DeltaOperation.class
+-a----        05.01.2026     22:39           1418 DeltaOperationType.class
+-a----        05.01.2026     22:39           2391 IntentGraphDelta.class
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\classes\o
+    rg\szpax\intentgraph\library\internal
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        05.01.2026     22:39           7149 GraphIndex.class
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\classes\o
+    rg\szpax\intentgraph\library\model
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        05.01.2026     22:39           1759 EntryPoint.class
+-a----        05.01.2026     22:39           1363 EntryPointKind.class
+-a----        05.01.2026     22:39           1995 IntentGraph.class
+-a----        05.01.2026     22:39           4639 IntentNode.class
+-a----        05.01.2026     22:39           1485 NodeReference.class
+-a----        05.01.2026     22:39           1287 NodeType.class
+-a----        05.01.2026     22:39           2047 ValidationResult.class
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\classes\p
+    rompts
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        04.01.2026     23:13            957 system-prompt.txt
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\generated
+    -sources
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     22:53                annotations
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\generated
+    -test-sources
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     22:53                test-annotations
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\maven-arc
+    hiver
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        05.01.2026     22:39             73 pom.properties
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\maven-sta
+    tus
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        05.01.2026     22:39                maven-compiler-plugin
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\maven-sta
+    tus\maven-compiler-plugin
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        05.01.2026     22:39                compile
+d-----        05.01.2026     22:39                testCompile
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\maven-sta
+    tus\maven-compiler-plugin\compile
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        05.01.2026     22:39                default-compile
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\maven-sta
+    tus\maven-compiler-plugin\compile\default-compile
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        05.01.2026     22:39              0 createdFiles.lst
+-a----        05.01.2026     22:39           1517 inputFiles.lst
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\maven-sta
+    tus\maven-compiler-plugin\testCompile
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        05.01.2026     22:39                default-testCompile
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\maven-sta
+    tus\maven-compiler-plugin\testCompile\default-testCompile
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        05.01.2026     22:39              0 createdFiles.lst
+-a----        05.01.2026     22:39            120 inputFiles.lst
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\test-clas
+    ses
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:18                org
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\test-clas
+    ses\org
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:18                szpax
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\test-clas
+    ses\org\szpax
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:18                intentgraph
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\test-clas
+    ses\org\szpax\intentgraph
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        04.01.2026     23:18                library
+    Directory: C:\Users\mosze\IdeaProjects\IntentGraph\library\target\test-clas
+    ses\org\szpax\intentgraph\library
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        05.01.2026     22:39           9905 IntentGraphLibraryTest.class

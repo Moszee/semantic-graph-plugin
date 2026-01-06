@@ -1,0 +1,33 @@
+# Compiled class files
+*.class
+
+# Maven
+library/target/
+
+# Gradle
+idea-plugin/build/
+idea-plugin/.gradle/
+
+# Kotlin
+idea-plugin/.kotlin/
+
+# IntelliJ Platform Plugin
+idea-plugin/.intellijPlatform/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Linux
+*~
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.swp
+*.swo

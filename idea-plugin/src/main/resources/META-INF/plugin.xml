@@ -1,0 +1,38 @@
+<!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <!-- Unique identifier of the plugin. It should be FQN, cannot be changed between the plugin versions. -->
+    <id>org.szpax.intent-graph.idea-plugin</id>
+
+    <!-- Public plugin name should be written in Title Case.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-name -->
+    <name>Intent Graph</name>
+
+    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
+    <vendor>szpax</vendor>
+
+    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
+    <description><![CDATA[
+        IDE tool window for browsing Intent Graph, generating deltas, and handing implementation off to Junie / AI Chat.
+    ]]></description>
+
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <depends>com.intellij.modules.compose</depends>
+    <depends>com.intellij.modules.lsp</depends>
+
+    <depends>com.intellij.java</depends>
+    <depends>org.jetbrains.plugins.yaml</depends>
+    <!-- Extensions defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="org.szpax.intentgraph.IntentGraph" displayType="BALLOON" isLogByDefault="false"/>
+        <toolWindow id="IntentGraph"
+                    anchor="right"
+                    factoryClass="org.szpax.intentgraph.ideaplugin.IntentGraphToolWindowFactory"/>
+        <projectConfigurable parentId="tools"
+                             instance="org.szpax.intentgraph.ideaplugin.IntentGraphConfigurable"
+                             id="org.szpax.intentgraph.ideaplugin.IntentGraphConfigurable"
+                             displayName="Intent Graph"/>
+    </extensions>
+</idea-plugin>

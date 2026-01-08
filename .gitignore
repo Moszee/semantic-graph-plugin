@@ -1,33 +1,183 @@
+# ===========================
+# IDE and Editors
+# ===========================
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ===========================
+# Java and Maven
+# ===========================
+
 # Compiled class files
 *.class
+*.jar
+*.war
+*.ear
 
 # Maven
 library/target/
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
 
+# ===========================
 # Gradle
+# ===========================
+
+# Gradle build outputs
 idea-plugin/build/
 idea-plugin/.gradle/
+build/
+.gradle/
+!gradle-wrapper.jar
 
+# Gradle cache
+.gradle-cache/
+
+# ===========================
 # Kotlin
-idea-plugin/.kotlin/
+# ===========================
 
+# Kotlin compiler
+idea-plugin/.kotlin/
+.kotlin/
+*.kotlin_module
+
+# ===========================
 # IntelliJ Platform Plugin
+# ===========================
+
 idea-plugin/.intellijPlatform/
+.intellijPlatform/
+
+# ===========================
+# Node.js and npm (VSCode Extension)
+# ===========================
+
+# Dependencies
+vscode-extension/node_modules/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+vscode-extension/out/
+vscode-extension/dist/
+*.vsix
+
+# npm package lock (optional, team decision)
+# package-lock.json
+
+# ===========================
+# Operating Systems
+# ===========================
 
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
 
 # Windows
 Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
 desktop.ini
+$RECYCLE.BIN/
 
 # Linux
 *~
+.directory
+.Trash-*
+
+# ===========================
+# Logs and Temporary Files
+# ===========================
 
 # Log files
 *.log
+logs/
 
 # Temporary files
 *.tmp
-*.swp
-*.swo
+*.temp
+*.bak
+*.backup
+*.cache
+
+# ===========================
+# Environment and Secrets
+# ===========================
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Secrets
+secrets/
+*.key
+*.pem
+
+# ===========================
+# Testing and Coverage
+# ===========================
+
+# Test reports
+test-output/
+test-results/
+
+# Coverage reports
+coverage/
+.nyc_output/
+*.lcov
+
+# ===========================
+# Miscellaneous
+# ===========================
+
+# Output files
+*.output.txt
+.output.txt
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Patch files
+*.patch
+*.diff
+

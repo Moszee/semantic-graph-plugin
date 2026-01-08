@@ -1,0 +1,14 @@
+id: user_profile
+type: behavior
+name: User Profile
+description: Manages user profile data including viewing and updating personal information
+entryPoints:
+  - name: profile
+    tags: ["users", "profile", "read", "update"]
+inputs: []
+outputs:
+  - nodeId: user_auth
+    relation: requires
+metadata:
+  priority: high
+  domain: identity

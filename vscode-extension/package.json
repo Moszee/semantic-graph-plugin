@@ -1,0 +1,104 @@
+{
+    "name": "intent-graph",
+    "displayName": "Intent Graph",
+    "description": "Visualize and manage Intent Graphs for Antigravity IDE",
+    "version": "0.0.1",
+    "publisher": "szpax",
+    "engines": {
+        "vscode": "^1.96.0"
+    },
+    "categories": [
+        "Visualization",
+        "Other"
+    ],
+    "activationEvents": [],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "intentGraph.openVisualization",
+                "title": "Intent Graph: Open Visualization"
+            },
+            {
+                "command": "intentGraph.newIntention",
+                "title": "Intent Graph: New Intention"
+            },
+            {
+                "command": "intentGraph.implement",
+                "title": "Intent Graph: Implement"
+            },
+            {
+                "command": "intentGraph.discard",
+                "title": "Intent Graph: Discard"
+            }
+        ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "intentGraph",
+                    "title": "Intent Graph",
+                    "icon": "resources/icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "intentGraph": [
+                {
+                    "id": "intentGraph.intents",
+                    "name": "Intents"
+                }
+            ]
+        },
+        "viewsWelcome": [
+            {
+                "view": "intentGraph.intents",
+                "contents": "No intentions found.\n[Create New Intention](command:intentGraph.newIntention)\n\nIntentions are graph deltas that describe proposed changes to your system architecture."
+            }
+        ],
+        "configuration": {
+            "title": "Intent Graph",
+            "properties": {
+                "intentGraph.openaiApiKey": {
+                    "type": "string",
+                    "default": "",
+                    "description": "OpenAI API Key for the planning agent"
+                },
+                "intentGraph.openaiModel": {
+                    "type": "string",
+                    "default": "gpt-4o",
+                    "description": "OpenAI model to use"
+                },
+                "intentGraph.openaiBaseUrl": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Custom OpenAI API base URL (leave empty for default api.openai.com)"
+                },
+                "intentGraph.verboseLogging": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable verbose debug logging in the Intent Graph output channel"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "lint": "eslint src",
+        "test": "node ./out/test/runTest.js"
+    },
+    "devDependencies": {
+        "@types/js-yaml": "^4.0.9",
+        "@types/node": "^20.x",
+        "@types/vscode": "^1.96.0",
+        "@typescript-eslint/eslint-plugin": "^8.x",
+        "@typescript-eslint/parser": "^8.x",
+        "eslint": "^9.x",
+        "typescript": "^5.x"
+    },
+    "dependencies": {
+        "js-yaml": "^4.1.0",
+        "openai": "^4.x"
+    }
+}

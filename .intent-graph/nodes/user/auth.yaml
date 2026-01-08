@@ -1,0 +1,12 @@
+id: user_auth
+type: behavior
+name: User Authentication
+description: Handles user login, logout, and session management
+entryPoints:
+  - name: auth
+    tags: ["users", "auth", "login", "logout"]
+inputs: []
+outputs: []
+metadata:
+  priority: critical
+  domain: security

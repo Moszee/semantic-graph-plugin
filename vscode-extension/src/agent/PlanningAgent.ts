@@ -2,8 +2,9 @@ import OpenAI from 'openai';
 import * as vscode from 'vscode';
 import { GraphStore } from '../store/GraphStore';
 import { GraphDelta, IntentNode } from '../lib/types';
-import { loadPlanningAgentPrompt, loadImplementationInstructionsTemplate, fillTemplate } from '../lib/prompts';
+import { loadPlanningAgentPrompt, loadImplementationInstructionsTemplate, loadNodeRefinementPrompt, fillTemplate } from '../lib/prompts';
 import { Logger } from '../lib/Logger';
+import { AgentLogger } from '../lib/AgentLogger';
 
 /**
  * Agent tools for RAG queries.
@@ -57,6 +58,44 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
                 required: ['filters']
             }
         }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'execute_code',
+            description: 'Execute JavaScript code and return the result. Available in context: store (graph store), vscode (VS Code API), fs (sandboxed to workspace only), path (Node.js path module), workspaceFolders (array of workspace folder paths), console.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    code: {
+                        type: 'string',
+                        description: 'JavaScript code to execute. Must return a value.'
+                    }
+                },
+                required: ['code']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'spawn_agent',
+            description: 'Spawn a sub-agent to perform a delegated task. Maximum 5 sub-agents allowed.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    task: {
+                        type: 'string',
+                        description: 'The task prompt for the sub-agent'
+                    },
+                    context: {
+                        type: 'string',
+                        description: 'Additional context to provide to the sub-agent'
+                    }
+                },
+                required: ['task']
+            }
+        }
     }
 ];
 
@@ -64,7 +103,9 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
  * Planning agent for creating intents.
  */
 export class PlanningAgent {
+    private static MAX_SUB_AGENTS = 5;
     private store: GraphStore;
+    private activeSubAgentCount = 0;
 
     constructor(store: GraphStore) {
         this.store = store;
@@ -173,10 +214,12 @@ export class PlanningAgent {
             Logger.warn('PlanningAgent', 'Failed to load system prompt from file, using fallback', { error });
         }
 
-        // Append current graph context
-        const nodes = this.store.getNodes();
-        systemPrompt += `\n\nCurrent graph nodes: ${JSON.stringify(nodes)}`;
-        Logger.debug('PlanningAgent', 'Added graph context to prompt', { nodeCount: nodes.length });
+        // Append current graph context using summary instead of full JSON
+        const graphSummary = this.generateGraphSummary();
+        systemPrompt = fillTemplate(systemPrompt, {
+            'GRAPH_SUMMARY': graphSummary
+        });
+        Logger.debug('PlanningAgent', 'Added graph context summary to prompt', { graphSummary });
 
         const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
             { role: 'system', content: systemPrompt },
@@ -185,6 +228,7 @@ export class PlanningAgent {
 
         try {
             Logger.info('PlanningAgent', 'Sending initial request to OpenAI API');
+            AgentLogger.getInstance().logPromptSent('planning-agent', { userPrompt });
             let response = await this.withRetry(
                 () => client.chat.completions.create({
                     model,
@@ -222,6 +266,7 @@ export class PlanningAgent {
                     });
 
                     const result = this.executeTool(toolCall.function.name, args);
+                    AgentLogger.getInstance().logToolCall(toolCall.function.name, args);
                     Logger.debug('PlanningAgent', `Tool result: ${toolCall.function.name}`, { result });
 
                     messages.push({
@@ -265,10 +310,171 @@ export class PlanningAgent {
             } else {
                 Logger.warn('PlanningAgent', 'Failed to parse intent from response', { content });
             }
+            AgentLogger.getInstance().logResponseReceived(
+                intent ? `Generated: ${intent.name}` : 'Failed to parse response',
+                { content }
+            );
             return intent;
 
         } catch (error) {
             Logger.error('PlanningAgent', 'Agent error during intention generation', error);
+            AgentLogger.getInstance().logError('Intention generation failed', error);
+            vscode.window.showErrorMessage(`Agent error: ${error}`);
+            return null;
+        }
+    }
+
+    /**
+     * Tweak an existing node based on user prompt.
+     * Supports tool calling to query both base graph and current delta.
+     */
+    async tweakNode(nodeId: string, userPrompt: string): Promise<GraphDelta | null> {
+        Logger.info('PlanningAgent', 'Tweaking node with AI', { nodeId, userPrompt });
+
+        // Get the node from the store (searches base + delta)
+        const node = this.store.getNode(nodeId);
+        if (!node) {
+            Logger.error('PlanningAgent', 'Node not found for tweaking', { nodeId });
+            vscode.window.showErrorMessage(`Node not found: ${nodeId}`);
+            return null;
+        }
+
+        // Get connected nodes for immediate context
+        const allNodes = this.store.getMergedNodes();
+        const connectedNodes = allNodes.filter(n =>
+            (node.inputs?.includes(n.id) || node.outputs?.includes(n.id) ||
+                n.inputs?.includes(nodeId) || n.outputs?.includes(nodeId)) &&
+            n.id !== nodeId
+        );
+
+        const config = vscode.workspace.getConfiguration('intentGraph');
+        const model = config.get<string>('openaiModel') || 'gpt-4o';
+        const client = this.createClient();
+
+        Logger.debug('PlanningAgent', 'Using model for node tweak', { model, connectedNodeCount: connectedNodes.length });
+
+        // Generate graph summary for tool context
+        const graphSummary = this.generateMergedGraphSummary();
+
+        // Load system prompt from external file with template filling
+        let systemPrompt: string;
+        try {
+            const promptTemplate = loadNodeRefinementPrompt();
+            systemPrompt = fillTemplate(promptTemplate, {
+                'FOCAL_NODE': JSON.stringify(node, null, 2),
+                'CONNECTED_NODES': connectedNodes.length > 0
+                    ? JSON.stringify(connectedNodes, null, 2)
+                    : '(no connected nodes)',
+                'GRAPH_SUMMARY': graphSummary
+            });
+            Logger.debug('PlanningAgent', 'Loaded node refinement prompt from file');
+        } catch (error) {
+            Logger.warn('PlanningAgent', 'Failed to load node refinement prompt, using fallback', { error });
+            systemPrompt = `You are an Intent Graph architect. Refine the node based on user request. Return a valid JSON GraphDelta.
+
+Focal node: ${JSON.stringify(node, null, 2)}
+Connected nodes: ${connectedNodes.length > 0 ? JSON.stringify(connectedNodes, null, 2) : '(none)'}
+
+${graphSummary}`;
+        }
+
+        const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+        ];
+
+        try {
+            Logger.info('PlanningAgent', 'Sending node tweak request to OpenAI API');
+            AgentLogger.getInstance().logPromptSent('node-refinement', { nodeId, userPrompt });
+            let response = await this.withRetry(
+                () => client.chat.completions.create({
+                    model,
+                    messages,
+                    tools: TOOLS,
+                    tool_choice: 'auto',
+                    response_format: { type: 'json_object' }
+                }),
+                3,
+                'node tweak request'
+            );
+            Logger.debug('PlanningAgent', 'Received node tweak response', {
+                hasToolCalls: !!response.choices[0].message.tool_calls,
+                finishReason: response.choices[0].finish_reason
+            });
+
+            // Handle tool calls in a loop
+            let iteration = 0;
+            while (response.choices[0].message.tool_calls) {
+                iteration++;
+                const toolCalls = response.choices[0].message.tool_calls;
+                Logger.info('PlanningAgent', `Processing tool calls for node tweak (iteration ${iteration})`, {
+                    toolCallCount: toolCalls.length,
+                    tools: toolCalls.map(tc => tc.function.name)
+                });
+
+                messages.push(response.choices[0].message);
+
+                for (const toolCall of toolCalls) {
+                    const args = JSON.parse(toolCall.function.arguments);
+                    Logger.debug('PlanningAgent', `Executing tool (merged): ${toolCall.function.name}`, {
+                        toolCallId: toolCall.id,
+                        arguments: args
+                    });
+
+                    // Use merged tool execution (base + delta)
+                    const result = this.executeToolMerged(toolCall.function.name, args);
+                    AgentLogger.getInstance().logToolCall(toolCall.function.name, args);
+                    Logger.debug('PlanningAgent', `Tool result: ${toolCall.function.name}`, { result });
+
+                    messages.push({
+                        role: 'tool',
+                        tool_call_id: toolCall.id,
+                        content: JSON.stringify(result)
+                    });
+                }
+
+                Logger.info('PlanningAgent', 'Sending follow-up request for node tweak');
+                response = await this.withRetry(
+                    () => client.chat.completions.create({
+                        model,
+                        messages,
+                        tools: TOOLS,
+                        tool_choice: 'auto',
+                        response_format: { type: 'json_object' }
+                    }),
+                    3,
+                    `node tweak follow-up (iteration ${iteration})`
+                );
+                Logger.debug('PlanningAgent', 'Received follow-up response', {
+                    hasToolCalls: !!response.choices[0].message.tool_calls,
+                    finishReason: response.choices[0].finish_reason
+                });
+            }
+
+            const content = response.choices[0].message.content || '';
+            Logger.debug('PlanningAgent', 'Node tweak response content', {
+                contentLength: content.length,
+                contentPreview: content.substring(0, 200) + (content.length > 200 ? '...' : '')
+            });
+
+            const delta = this.parseIntentFromResponse(content);
+            if (delta) {
+                Logger.info('PlanningAgent', 'Successfully parsed delta for node tweak', {
+                    deltaName: delta.name,
+                    operationCount: delta.operations?.length || 0
+                });
+            } else {
+                Logger.warn('PlanningAgent', 'Failed to parse delta from node tweak response', { content });
+            }
+            AgentLogger.getInstance().logResponseReceived(
+                delta ? `Tweaked: ${delta.name}` : 'Failed to parse response',
+                { content }
+            );
+            return delta;
+
+        } catch (error) {
+            Logger.error('PlanningAgent', 'Agent error during node tweak', error);
+            AgentLogger.getInstance().logError('Node tweak failed', error);
             vscode.window.showErrorMessage(`Agent error: ${error}`);
             return null;
         }
@@ -285,11 +491,214 @@ export class PlanningAgent {
                 return this.store.getSubgraph(args.entryPointId as string);
             case 'find_nodes':
                 return this.store.findNodes(args.filters as string[][]);
+            case 'execute_code':
+                return this.executeCode(args.code as string);
+            case 'spawn_agent':
+                return this.spawnSubAgent(args.task as string, args.context as string | undefined);
             default:
                 Logger.warn('PlanningAgent', `Unknown tool called: ${name}`, { args });
                 return { error: `Unknown tool: ${name}` };
         }
     }
+
+    /**
+     * Execute a tool call using merged graph (base + delta).
+     * This allows the AI to see nodes from both the committed graph and the current delta.
+     */
+    private executeToolMerged(name: string, args: Record<string, unknown>): unknown {
+        const mergedNodes = this.store.getMergedNodes();
+        const nodeMap = new Map(mergedNodes.map(n => [n.id, n]));
+
+        switch (name) {
+            case 'get_node':
+                return nodeMap.get(args.id as string) ?? null;
+            case 'get_subgraph': {
+                // BFS traversal from entry point using merged nodes
+                const result: IntentNode[] = [];
+                const visited = new Set<string>();
+                const queue: string[] = [args.entryPointId as string];
+
+                while (queue.length > 0) {
+                    const nodeId = queue.shift()!;
+                    if (visited.has(nodeId)) continue;
+                    visited.add(nodeId);
+
+                    const node = nodeMap.get(nodeId);
+                    if (!node) continue;
+
+                    result.push(node);
+
+                    if (node.outputs) {
+                        for (const outputId of node.outputs) {
+                            if (!visited.has(outputId)) {
+                                queue.push(outputId);
+                            }
+                        }
+                    }
+                }
+
+                return result;
+            }
+            case 'find_nodes': {
+                const filters = args.filters as string[][];
+                return mergedNodes.filter(node => {
+                    if (!node.entryPoints || node.entryPoints.length === 0) return false;
+
+                    return filters.some(filterGroup => {
+                        return node.entryPoints!.some(ep => {
+                            const epName = ep.name.toLowerCase();
+                            return filterGroup.every(term => epName.includes(term.toLowerCase()));
+                        });
+                    });
+                });
+            }
+            case 'execute_code':
+                return this.executeCode(args.code as string);
+            case 'spawn_agent':
+                return this.spawnSubAgent(args.task as string, args.context as string | undefined);
+            default:
+                Logger.warn('PlanningAgent', `Unknown tool called: ${name}`, { args });
+                return { error: `Unknown tool: ${name}` };
+        }
+    }
+
+    /**
+     * Execute JavaScript code in a sandboxed context.
+     * Provides access to store, vscode APIs, and secured filesystem (workspace only).
+     */
+    private async executeCode(code: string): Promise<unknown> {
+        Logger.info('PlanningAgent', 'Executing code', { codeLength: code.length });
+        try {
+            const vm = require('vm');
+            const fs = require('fs');
+            const path = require('path');
+
+            // Get workspace folders for project access
+            const workspaceFolders = vscode.workspace.workspaceFolders?.map(f => f.uri.fsPath) || [];
+
+            // Validate that a path is within allowed workspace folders
+            const isPathAllowed = (targetPath: string): boolean => {
+                const resolved = path.resolve(targetPath);
+                return workspaceFolders.some(folder =>
+                    resolved.startsWith(folder + path.sep) || resolved === folder
+                );
+            };
+
+            // Create sandboxed fs that only allows access within workspace
+            const sandboxedFs = {
+                readFileSync: (filePath: string, options?: any) => {
+                    if (!isPathAllowed(filePath)) {
+                        throw new Error(`Access denied: ${filePath} is outside workspace`);
+                    }
+                    return fs.readFileSync(filePath, options);
+                },
+                readFile: (filePath: string, options: any, callback?: any) => {
+                    if (!isPathAllowed(filePath)) {
+                        const err = new Error(`Access denied: ${filePath} is outside workspace`);
+                        if (callback) callback(err);
+                        else if (typeof options === 'function') options(err);
+                        return;
+                    }
+                    return fs.readFile(filePath, options, callback);
+                },
+                readdirSync: (dirPath: string, options?: any) => {
+                    if (!isPathAllowed(dirPath)) {
+                        throw new Error(`Access denied: ${dirPath} is outside workspace`);
+                    }
+                    return fs.readdirSync(dirPath, options);
+                },
+                statSync: (filePath: string, options?: any) => {
+                    if (!isPathAllowed(filePath)) {
+                        throw new Error(`Access denied: ${filePath} is outside workspace`);
+                    }
+                    return fs.statSync(filePath, options);
+                },
+                existsSync: (filePath: string) => {
+                    if (!isPathAllowed(filePath)) {
+                        return false; // Report as non-existent rather than error
+                    }
+                    return fs.existsSync(filePath);
+                }
+            };
+
+            const context = {
+                store: this.store,
+                vscode,
+                fs: sandboxedFs,
+                path,
+                workspaceFolders,
+                console: console,
+                result: undefined as unknown
+            };
+            vm.createContext(context);
+
+            const wrappedCode = `result = (async () => { ${code} })()`;
+            vm.runInContext(wrappedCode, context, { timeout: 5000 });
+
+            const result = await context.result;
+            Logger.debug('PlanningAgent', 'Code execution result', { result });
+            return result;
+        } catch (error: any) {
+            Logger.error('PlanningAgent', 'Code execution failed', error);
+            return { error: error.message };
+        }
+    }
+
+    /**
+     * Spawn a sub-agent to perform a delegated task.
+     * Limited to MAX_SUB_AGENTS concurrent agents.
+     */
+    private async spawnSubAgent(task: string, context?: string): Promise<GraphDelta | null> {
+        Logger.info('PlanningAgent', 'Spawning sub-agent', { task, hasContext: !!context });
+
+        if (this.activeSubAgentCount >= PlanningAgent.MAX_SUB_AGENTS) {
+            Logger.warn('PlanningAgent', 'Sub-agent limit reached', {
+                current: this.activeSubAgentCount,
+                max: PlanningAgent.MAX_SUB_AGENTS
+            });
+            return null;
+        }
+
+        this.activeSubAgentCount++;
+        AgentLogger.getInstance().logToolCall('spawn_agent', { task, context, agentCount: this.activeSubAgentCount });
+
+        try {
+            const prompt = context ? `${context}\n\nTask: ${task}` : task;
+            const result = await this.generateIntention(prompt);
+            Logger.info('PlanningAgent', 'Sub-agent completed', { hasResult: !!result });
+            return result;
+        } finally {
+            this.activeSubAgentCount--;
+        }
+    }
+
+    /**
+     * Generate a concise graph summary for merged graph (base + delta).
+     * Used by tweakNode to give the AI visibility into the current working state.
+     */
+    private generateMergedGraphSummary(): string {
+        const nodes = this.store.getMergedNodes();
+        const nodeList = nodes.map(n => `${n.id} (${n.type}): ${n.name}`).join('\n- ');
+        const entryPoints = nodes
+            .flatMap(n => n.entryPoints || [])
+            .map(ep => `${ep.type}: ${ep.name}`)
+            .slice(0, 15)
+            .join('\n- ');
+
+        return [
+            'AVAILABLE TOOLS: get_node, get_subgraph, find_nodes',
+            'Use these tools to explore the graph before making changes.',
+            '',
+            `Total nodes: ${nodes.length}`,
+            '',
+            'Available nodes:',
+            nodeList ? `- ${nodeList}` : '(none)',
+            '',
+            'Entry points:',
+            entryPoints ? `- ${entryPoints}` : '(none)'
+        ].join('\n');
+    }
+
 
     /**
      * Parse intent from LLM response.
@@ -337,6 +746,30 @@ export class PlanningAgent {
         });
         return null;
     }
+
+    /**
+     * Generate a concise graph summary for prompt context.
+     * Provides node IDs and entry points without full node details.
+     */
+    private generateGraphSummary(): string {
+        const nodes = this.store.getNodes();
+        const nodeList = nodes.map(n => `${n.id} (${n.type}): ${n.name}`).join('\n- ');
+        const entryPoints = nodes
+            .flatMap(n => n.entryPoints || [])
+            .map(ep => `${ep.type}: ${ep.name}`)
+            .slice(0, 15)
+            .join('\n- ');
+
+        return [
+            `Node count: ${nodes.length}`,
+            '',
+            'Available nodes:',
+            nodeList ? `- ${nodeList}` : '(none)',
+            '',
+            'Entry points:',
+            entryPoints ? `- ${entryPoints}` : '(none)'
+        ].join('\n');
+    }
 }
 
 /**
@@ -345,17 +778,24 @@ export class PlanningAgent {
 export function generateImplementationInstructions(intent: GraphDelta, nodes: IntentNode[]): string {
     // Build operations description
     const operationsLines: string[] = [];
+    const allQuestions: string[] = [];
+
     for (const op of intent.operations || []) {
+        // Collect questions from each operation's node
+        if (op.node.questions?.length) {
+            allQuestions.push(...op.node.questions.map(q => `- ${op.node.name}: ${q}`));
+        }
+
         switch (op.operation) {
             case 'add':
                 operationsLines.push(`### ADD: ${op.node.name} (${op.node.type})`);
                 operationsLines.push(`- **ID**: ${op.node.id}`);
                 operationsLines.push(`- **Description**: ${op.node.description}`);
                 if (op.node.inputs?.length) {
-                    operationsLines.push(`- **Depends on**: ${op.node.inputs.map(i => i.nodeId).join(', ')}`);
+                    operationsLines.push(`- **Depends on**: ${op.node.inputs.join(', ')}`);
                 }
                 if (op.node.outputs?.length) {
-                    operationsLines.push(`- **Produces for**: ${op.node.outputs.map(o => o.nodeId).join(', ')}`);
+                    operationsLines.push(`- **Produces for**: ${op.node.outputs.join(', ')}`);
                 }
                 if (op.node.invariants?.length) {
                     operationsLines.push(`- **Invariants (MUST hold)**: ${op.node.invariants.join('; ')}`);
@@ -374,11 +814,13 @@ export function generateImplementationInstructions(intent: GraphDelta, nodes: In
         }
     }
 
-    // Build context nodes description
-    const contextLines: string[] = [];
-    for (const node of nodes.slice(0, 10)) {
-        contextLines.push(`- **${node.name}** (${node.type}): ${node.description?.slice(0, 150) || 'No description'}`);
-    }
+    // Build node IDs list
+    const nodeIds = nodes.slice(0, 20).map(n => n.id).join(', ');
+
+    // Format questions
+    const questionsText = allQuestions.length > 0
+        ? allQuestions.join('\n')
+        : '(No questions - proceed with implementation)';
 
     // Try to load template from file
     try {
@@ -387,7 +829,8 @@ export function generateImplementationInstructions(intent: GraphDelta, nodes: In
             'INTENT_NAME': intent.name,
             'INTENT_DESCRIPTION': intent.description || 'No description provided.',
             'OPERATIONS': operationsLines.join('\n'),
-            'CONTEXT_NODES': contextLines.join('\n')
+            'NODE_IDS': nodeIds || '(none)',
+            'QUESTIONS': questionsText
         });
     } catch {
         // Fallback to inline format if template not found
@@ -401,9 +844,12 @@ export function generateImplementationInstructions(intent: GraphDelta, nodes: In
             '',
             ...operationsLines,
             '',
+            `## Questions to Address`,
+            questionsText,
+            '',
             `## Context`,
-            'Current related nodes in the graph:',
-            ...contextLines
+            `Related nodes: ${nodeIds}`
         ].join('\n');
     }
 }
+

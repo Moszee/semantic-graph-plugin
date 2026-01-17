@@ -82,23 +82,28 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
+        "vscode:prepublish": "npm run compile && npm run build:webview",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
+        "build:webview": "node esbuild.js",
+        "watch:webview": "node esbuild.js --watch",
         "lint": "eslint src",
         "test": "node ./out/test/runTest.js"
     },
     "devDependencies": {
+        "@preact/preset-vite": "^2.10.2",
         "@types/js-yaml": "^4.0.9",
-        "@types/node": "^20.x",
+        "@types/node": "^20.19.28",
         "@types/vscode": "^1.96.0",
         "@typescript-eslint/eslint-plugin": "^8.x",
         "@typescript-eslint/parser": "^8.x",
+        "esbuild": "^0.20.0",
         "eslint": "^9.x",
         "typescript": "^5.x"
     },
     "dependencies": {
         "js-yaml": "^4.1.0",
-        "openai": "^4.x"
+        "openai": "^4.x",
+        "preact": "^10.19.3"
     }
 }

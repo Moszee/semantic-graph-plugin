@@ -48,9 +48,9 @@ export class GraphQuery {
 
             // Add connected nodes (outputs)
             if (node.outputs) {
-                for (const ref of node.outputs) {
-                    if (!visited.has(ref.nodeId)) {
-                        queue.push(ref.nodeId);
+                for (const nodeId of node.outputs) {
+                    if (!visited.has(nodeId)) {
+                        queue.push(nodeId);
                     }
                 }
             }

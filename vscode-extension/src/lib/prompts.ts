@@ -29,6 +29,13 @@ export function loadImplementationInstructionsTemplate(): string {
 }
 
 /**
+ * Loads the node refinement prompt for AI-powered node tweaking.
+ */
+export function loadNodeRefinementPrompt(): string {
+    return loadPrompt('node-refinement');
+}
+
+/**
  * Fills in template placeholders with actual values.
  */
 export function fillTemplate(template: string, values: Record<string, string>): string {

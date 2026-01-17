@@ -41,8 +41,24 @@ class IntentTreeItem extends vscode.TreeItem {
         private store: GraphStore
     ) {
         super(intent.name, vscode.TreeItemCollapsibleState.None);
-        this.description = intent.description || '';
-        this.tooltip = `${intent.name}: ${intent.operations?.length || 0} operations`;
+
+        // Check if any node in the intent has open questions
+        const questionsCount = intent.operations?.reduce((count, op) => {
+            return count + (op.node.questions?.length || 0);
+        }, 0) || 0;
+
+        const hasQuestions = questionsCount > 0;
+
+        // Add visual indicator for intents with questions
+        if (hasQuestions) {
+            this.label = `🔴 ${intent.name}`;
+            this.description = `${questionsCount} question(s) - ${intent.description || ''}`;
+        } else {
+            this.description = intent.description || '';
+        }
+
+        this.tooltip = `${intent.name}: ${intent.operations?.length || 0} operations` +
+            (hasQuestions ? `\n⚠️ ${questionsCount} open question(s)` : '');
         this.contextValue = 'intent';
 
         this.command = {
@@ -52,3 +68,4 @@ class IntentTreeItem extends vscode.TreeItem {
         };
     }
 }
+

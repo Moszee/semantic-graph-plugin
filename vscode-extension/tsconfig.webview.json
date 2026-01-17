@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "types": [
+      "preact"
+    ],
+    "lib": [
+      "DOM",
+      "ES2022"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "outDir": "out/webview",
+    "rootDir": "webview",
+    "skipLibCheck": true,
+    "composite": true
+  },
+  "include": [
+    "webview/**/*"
+  ]
+}

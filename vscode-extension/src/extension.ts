@@ -81,35 +81,30 @@ export function activate(context: vscode.ExtensionContext) {
                 graphStore.getNodes()
             );
 
-            // Trigger Antigravity Agent by opening chat with pre-filled instructions
-            try {
-                Logger.debug('Extension', 'Opening Agent chat with instructions', {
-                    intentName: selectedIntent.name,
-                    instructionsLength: instructions.length
-                });
-                // Open the chat view with the implementation instructions as the query
-                await vscode.commands.executeCommand('workbench.action.chat.open', {
-                    query: instructions
-                });
+            // Copy implementation instructions to clipboard for the agent
+            await vscode.env.clipboard.writeText(instructions);
+            Logger.info('Extension', 'Instructions copied to clipboard', {
+                instructionsLength: instructions.length
+            });
 
-                vscode.window.showInformationMessage(
-                    `Implementation instructions sent to Agent. Review and press Enter to execute.`,
-                    'Merge Intent Now'
-                ).then(action => {
-                    if (action === 'Merge Intent Now') {
-                        Logger.info('Extension', 'Merging intent into graph', { intentName: selectedIntent.name });
-                        graphStore.deleteIntent(selectedIntent.name);
-                        graphStore.selectIntent(null);
-                        vscode.window.showInformationMessage(`Intent "${selectedIntent.name}" merged into graph.`);
-                    }
-                });
-            } catch (error) {
-                Logger.warn('Extension', 'Failed to open Agent chat, falling back to clipboard', error);
-                // Fallback: Copy to clipboard if chat command fails
-                await vscode.env.clipboard.writeText(instructions);
-                vscode.window.showWarningMessage(
-                    'Could not open Agent chat automatically. Instructions copied to clipboard.'
-                );
+            const action = await vscode.window.showInformationMessage(
+                `Implementation instructions copied to clipboard. Paste into the Agent chat (Ctrl+V) and press Enter.`,
+                'Merge Intent Now',
+                'Open Chat'
+            );
+
+            if (action === 'Merge Intent Now') {
+                Logger.info('Extension', 'Merging intent into graph', { intentName: selectedIntent.name });
+                graphStore.deleteIntent(selectedIntent.name);
+                graphStore.selectIntent(null);
+                vscode.window.showInformationMessage(`Intent "${selectedIntent.name}" merged into graph.`);
+            } else if (action === 'Open Chat') {
+                // Try to open chat panel (may vary by IDE)
+                try {
+                    await vscode.commands.executeCommand('workbench.action.chat.open');
+                } catch {
+                    // Ignore if command not available
+                }
             }
         })
     );

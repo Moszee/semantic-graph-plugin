@@ -1,147 +1,290 @@
-Here’s a **full, self-contained documentation** you can add to your repo (e.g., `INTENT_GRAPH_WORKFLOW.md`) that captures the **entire flow from concept to IDE usage**, structured for clarity.
+# Intent Graph – Schema, Agent Interaction, and Usage Guide
+
+This document describes the **Intent Graph** concept: its schema, how AI agents interact with it, and how developers use it through IDE plugins.
 
 ---
 
-# Intent Graph Workflow – Concept, Library, and IDE Integration
+## 1. Core Concept
 
-## 1. Base Idea
+The Intent Graph is a **declarative model of application behavior** that serves as the single source of truth for what the system should do.
 
-The Intent Graph Workflow is a **new approach to capturing and enforcing application behavior**.
-Key principles:
+**Key principles:**
 
-* **Intent is authoritative** – defines what the system should do, independent of code or UI.
-* **Code is a byproduct** – implementation conforms to the intent graph.
-* **AI agents assist, not dictate** – agents propose changes or generate code, but the library enforces correctness.
-* **Separation of concerns** – different layers handle modeling, interaction, and AI orchestration.
-
----
-
-## 2. New Workflow Description
-
-The workflow moves from **human intent → graph → delta → code**:
-
-1. **Author intent**
-
-    * Define behaviors, events, transitions, invariants, and entry points
-    * Stored as YAML/JSON in the project repository
-2. **Refine via AI (optional)**
-
-    * User expresses a desired change in natural language
-    * Plugin prepares the relevant subgraph and context
-    * AI agent proposes a **graph delta**
-3. **Review and approve**
-
-    * Plugin visualizes delta
-    * User validates correctness
-4. **Implement**
-
-    * Once approved, user presses “Implement”
-    * AI agent modifies the code to match intent
-    * Library validates conformance after application
-5. **Versioning**
-
-    * Graph files are committed to Git
-    * Deltas remain auditable
-    * Team members synchronize via Git pull/merge
-
-**Key insight:** This is a **contract-driven workflow**. Intent is the contract; code is a compilation of that contract.
+*   **Intent is authoritative** – defines system behavior independent of implementation
+*   **Code follows intent** – implementation conforms to the intent graph
+*   **AI assists, doesn't dictate** – agents propose changes; developers approve
+*   **Version-controlled** – stored as YAML/JSON files in your repository
 
 ---
 
-## 3. Library
+## 2. Intent Graph Schema
 
-### Responsibilities
+### Node Structure
 
-* Define **Intent Graph schema** (nodes, invariants, entry points, edges via inputs/outputs)
-* Validate graphs and deltas for **schema compliance, reference integrity, cycles, and invariants**
-* Provide **deterministic in-memory querying**:
+Each node in the intent graph represents a behavioral unit with the following properties:
 
-    * Retrieve nodes, subgraphs, or downstream/upstream dependencies
-* Apply **explicit graph deltas** (add/update/remove nodes and edges)
-* Expose **AI integration hooks** for context preparation and delta application
-* **Never** contacts an LLM or modifies intent silently
+```yaml
+id: unique_node_identifier
+name: Human-readable node name
+description: What this behavior does
+type: behavior | event | transition | invariant
+inputs:
+  - name: input_parameter_name
+    type: string | number | boolean | object
+    source: node_id  # References another node's output
+outputs:
+  - name: output_parameter_name
+    type: string | number | boolean | object
+metadata:
+  tags: [tag1, tag2]
+  owner: team_name
+```
 
-### Storage Model
+### Entry Points
 
-* YAML/JSON files in project repo
-* Human-readable, Git-friendly, mergeable
-* Source of truth for intent
-* Graph DB can be added later, but not required for MVP
+Entry points define how external systems interact with your intent graph:
 
-### API Overview
+```yaml
+entry_points:
+  - id: user_login_endpoint
+    kind: endpoint  # endpoint | job | queue/topic
+    method: POST
+    path: /api/auth/login
+    target_node: authenticate_user
+  - id: daily_cleanup_job
+    kind: job
+    schedule: "0 2 * * *"
+    target_node: cleanup_expired_sessions
+  - id: order_created_event
+    kind: queue/topic
+    source: order_service
+    target_node: process_order
+```
 
-* Load / persist graph
-* Validate graph or delta
-* Query nodes and subgraphs
-* Generate context for AI
-* Apply reviewed deltas
+### Edge Types and Relations
+
+Edges connect nodes through their inputs/outputs and represent different types of relationships:
+
+*   **Data flow** – output of one node feeds into input of another
+*   **Sequence** – nodes execute in order
+*   **Branching** – conditional paths based on outputs
+*   **Aggregation** – multiple inputs converge into one node
+
+### Invariants
+
+Invariants are constraints that must always hold true:
+
+```yaml
+invariants:
+  - id: user_must_be_authenticated
+    description: All user actions require valid authentication
+    applies_to: [profile_update, password_change, logout]
+    condition: authenticated == true
+```
 
 ---
 
-## 4. IDE Plugin
+## 3. AI Agent Interaction
 
-### Responsibilities
+### How AI Proposes Changes
 
-* Provide **user-facing interface** for intent graphs
-* Visualize:
+The workflow for AI-assisted modifications:
 
-    * Full graph
-    * Subgraphs
-    * Proposed deltas
-* Allow **refinement of graph deltas** before approval
-* Generate **AI prompts** with context for coding or delta proposals
-* Validate changes via the library after AI application
-* Act as the **primary interaction surface** for developers
+1.  **Developer expresses intent** – "Add email verification to user registration"
+2.  **Plugin prepares context** – extracts relevant subgraph and node definitions
+3.  **AI proposes graph delta** – suggests new nodes, edges, or modifications
+4.  **Developer reviews in IDE** – visualizes the proposed changes
+5.  **Approval and implementation** – developer accepts delta, then requests code generation
 
-### Interaction Pattern
+### Graph Delta Format
 
-1. User views or edits intent nodes in IDE
-2. User requests AI assistance (optional)
-3. Plugin prepares relevant subgraph / context file
-4. AI proposes delta
-5. User reviews delta in IDE visualization
-6. User presses **“Implement”** → plugin invokes AI coding agent
-7. Library validates resulting code against the intent graph
+AI agents propose changes as structured deltas:
 
-**Key principle:** The plugin guides AI; the library enforces truth. The developer remains in control.
+```yaml
+delta:
+  add_nodes:
+    - id: send_verification_email
+      name: Send Verification Email
+      type: behavior
+      inputs:
+        - name: user_email
+          type: string
+          source: register_user
+      outputs:
+        - name: email_sent
+          type: boolean
+  
+  update_nodes:
+    - id: register_user
+      outputs:
+        - name: user_email  # New output
+          type: string
+  
+  remove_nodes:
+    - id: old_registration_flow
+  
+  add_edges:
+    - from: register_user
+      to: send_verification_email
+      via: user_email
+```
+
+### Context Preparation
+
+The IDE plugin provides AI agents with focused context:
+
+*   **Subgraph extraction** – only relevant nodes and their dependencies
+*   **Schema definitions** – type information and constraints
+*   **Existing invariants** – rules that must be preserved
+*   **Entry point mapping** – how external systems interact with affected nodes
+
+**Key principle:** AI receives structured, schema-compliant context and returns structured, schema-compliant deltas.
 
 ---
 
-## 5. Flow Summary Diagram (Conceptual)
+## 4. How to Use the Intent Graph
+
+### Via IDE Plugins (Primary Method)
+
+The VSCode and IntelliJ IDEA plugins provide the main interface for working with intent graphs:
+
+#### Viewing the Graph
+
+1.  Open the **Intent Graph** panel in your IDE
+2.  Navigate the visual representation of nodes and edges
+3.  Click nodes to see details, inputs, outputs, and metadata
+4.  Filter by tags, types, or entry points
+
+#### Requesting AI Assistance
+
+1.  Select a node or region of the graph
+2.  Describe your desired change in natural language
+3.  Review the proposed delta visualization
+4.  Refine or approve the delta
+5.  Press **"Implement"** to generate code changes
+
+#### Manual Editing
+
+You can also edit the YAML/JSON files directly:
+
+```yaml
+# .intent-graph/user_flows.yaml
+nodes:
+  - id: authenticate_user
+    name: Authenticate User
+    type: behavior
+    inputs:
+      - name: username
+        type: string
+      - name: password
+        type: string
+    outputs:
+      - name: auth_token
+        type: string
+      - name: user_id
+        type: string
+```
+
+**Plugin features:**
+*   Syntax validation as you type
+*   Auto-completion for node references
+*   Visual diff for deltas
+*   One-click navigation between nodes
+*   Integrated AI assistance
+
+#### Workflow Example
+
+**Scenario:** Add password reset functionality
+
+1.  **Express intent:** "Add password reset flow triggered by email link"
+2.  **AI proposes delta:**
+    *   New nodes: `request_reset`, `validate_reset_token`, `update_password`
+    *   New entry point: `POST /api/auth/reset-password`
+    *   New edges connecting the flow
+3.  **Review in IDE:** Visualize how new nodes integrate with existing authentication
+4.  **Approve delta:** Graph files updated in `.intent-graph/`
+5.  **Implement:** AI generates code conforming to the new intent
+6.  **Commit:** Graph files and code committed together to Git
+
+---
+
+## 5. Storage and Versioning
+
+### File Structure
 
 ```
-Human Intent
-      ↓
-Intent Graph (YAML/JSON in repo)
-      ↓  (plugin prepares subgraph/context)
-AI Agent (proposes delta)
-      ↓  (reviewed in IDE)
-Graph Delta (approved)
-      ↓  (press "Implement")
-Code Generation / Refactoring (via AI)
-      ↓
-Library Validation (ensure conformance) (outside of MVP)
-      ↓
-Commit to Git (source of truth updated)
+.intent-graph/
+  ├── authentication.yaml
+  ├── user_management.yaml
+  ├── order_processing.yaml
+  └── schema_version.yaml
 ```
+
+### Git Integration
+
+*   **Intent graphs are version-controlled** – track changes over time
+*   **Deltas are auditable** – see what changed and why
+*   **Team synchronization** – pull/merge like any other code
+*   **Branch flows** – experiment with intent changes in feature branches
+
+### Merge Conflicts
+
+When two developers modify the same intent graph:
+
+1.  Git detects conflicts in YAML files
+2.  IDE plugin provides visual merge tool
+3.  Resolve at the node/edge level, not raw text
+4.  Plugin validates merged result against schema
 
 ---
 
 ## 6. Design Principles
 
-* **Authority:** Intent graph is the single source of truth
-* **Separation:** Library = deterministic core; plugin = interaction; AI = assistant
-* **Determinism:** Library enforces all invariants; AI is non-authoritative
-* **Versioning:** All deltas are auditable and Git-managed
-* **Minimal friction:** Developers interact mostly via IDE plugin
-* **Extensible:** Future storage or AI backends can be swapped without changing core semantics
+*   **Schema-first** – well-defined structure enables tooling and AI assistance
+*   **Human-in-the-loop** – developers always review and approve AI proposals
+*   **Declarative** – describe *what*, not *how*
+*   **Composable** – nodes and edges form reusable patterns
+*   **Observable** – visualization makes intent transparent
+*   **Verifiable** – schema validation ensures correctness
 
 ---
 
-This document provides a **complete overview of the workflow**, from base idea to practical implementation, ready for library and plugin source documentation.
+## 7. Nice-to-Have: Standalone Library and Backend
 
----
+> [!NOTE]
+> The following components are **optional** and only needed if you want to build custom tooling beyond the VSCode/IntelliJ plugins.
 
-I can also create a **compact, inline Javadoc/KDoc version** for embedding directly in library code if you want it alongside class definitions.
+### Standalone Library (Optional)
 
-Do you want me to do that?
+If the IDE plugins don't meet your needs, you can use the standalone library:
+
+**Responsibilities:**
+*   Load and persist intent graphs from YAML/JSON
+*   Validate schema compliance and invariants
+*   Query nodes, subgraphs, and dependencies
+*   Apply deltas programmatically
+*   Generate AI context
+
+**When you might need it:**
+*   Building CI/CD validation tools
+*   Creating custom visualizations
+*   Integrating with other development tools
+*   Automating graph transformations
+
+### Backend Service (Optional)
+
+For teams wanting centralized graph management:
+
+**Responsibilities:**
+*   Centralized graph storage (beyond Git)
+*   Multi-user collaboration features
+*   Advanced querying and analytics
+*   Integration with external systems
+
+**When you might need it:**
+*   Large teams with complex coordination needs
+*   Centralized governance and compliance
+*   Real-time collaboration on graph changes
+*   Cross-repository intent sharing
+
+**For most use cases, the IDE plugins with Git-based storage are sufficient.**

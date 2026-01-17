@@ -17,8 +17,8 @@ Node properties (for payload):
 - type: behavior, decision, data, integration
 - name: String
 - description: String
-- invariants: List of Strings (optional)
-- entryPoints: List of EntryPoint (kind: REST/MESSAGE/UI/TIMER, ref: String)
+- invariants: List of Strings (optional). This is a list of conditions that must always hold
+- entryPoints: List of EntryPoint (kind: REST, JOB, LISTENER, UI, OTHER, ref: String)
 - inputs/outputs: List of NodeReference (ref: String)
 - metadata: Map of String to String
 

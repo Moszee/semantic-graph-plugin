@@ -94,9 +94,25 @@ export class GraphStore {
 
     /**
      * Get node by ID.
+     * Searches base nodes first, then checks the selected delta for new/updated nodes.
      */
     getNode(id: string): IntentNode | undefined {
-        return this.query.getNode(id);
+        // First check base nodes
+        const baseNode = this.query.getNode(id);
+        if (baseNode) {
+            return baseNode;
+        }
+
+        // If not found in base nodes, check the selected delta
+        if (this.selectedIntent) {
+            for (const op of this.selectedIntent.operations) {
+                if (op.node.id === id) {
+                    return op.node;
+                }
+            }
+        }
+
+        return undefined;
     }
 
     /**

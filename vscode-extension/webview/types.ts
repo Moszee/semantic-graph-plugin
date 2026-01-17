@@ -1,12 +1,12 @@
 /**
  * Represents the type of an intent node.
  */
-export type NodeType = 'behavior' | 'decision' | 'data' | 'integration' | 'view';
+export type NodeType = 'behavior' | 'decision' | 'data' | 'integration';
 
 /**
  * Represents the type of entry point that triggers a node.
  */
-export type EntryPointType = 'REST' | 'JOB' | 'LISTENER' | 'UI' | 'OTHER'
+export type EntryPointType = 'REST' | 'JOB' | 'LISTENER' | 'UI' | 'OTHER';
 
 /**
  * Represents an entry point for a node.
@@ -25,18 +25,11 @@ export interface IntentNode {
     name: string;
     description: string;
     invariants?: string[];
+    questions?: string[];
     entryPoints?: EntryPoint[];
     inputs?: string[];
     outputs?: string[];
     metadata?: Record<string, string>;
-    questions?: string[];
-}
-
-/**
- * Represents the entire Intent Graph (current state).
- */
-export interface IntentGraph {
-    nodes: Map<string, IntentNode>;
 }
 
 /**
@@ -60,3 +53,31 @@ export interface GraphDelta {
     description: string;
     operations: DeltaOperation[];
 }
+
+/**
+ * Type of agent log entry.
+ */
+export type AgentLogType = 'tool_call' | 'prompt_sent' | 'response_received' | 'error';
+
+/**
+ * Represents a single log entry from the agent.
+ */
+export interface AgentLogEntry {
+    timestamp: number;
+    type: AgentLogType;
+    message: string;
+}
+
+export interface WindowGraphData {
+    nodes: IntentNode[];
+    selectedIntent: GraphDelta | null;
+    deltaNodeIds: Set<string>;
+    logs: AgentLogEntry[];
+}
+
+declare global {
+    interface Window {
+        GRAPH_DATA: WindowGraphData;
+    }
+}
+

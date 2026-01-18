@@ -36,6 +36,13 @@ export function loadNodeRefinementPrompt(): string {
 }
 
 /**
+ * Loads the implementation agent prompt for single-class implementation.
+ */
+export function loadImplementationAgentPrompt(): string {
+    return loadPrompt('implementation-agent');
+}
+
+/**
  * Fills in template placeholders with actual values.
  */
 export function fillTemplate(template: string, values: Record<string, string>): string {

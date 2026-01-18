@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 /**
  * Type of agent log entry.
  */
-export type AgentLogType = 'tool_call' | 'prompt_sent' | 'response_received' | 'error';
+export type AgentLogType = 'tool_call' | 'prompt_sent' | 'response_received' | 'error' | 'code_execution';
 
 /**
  * Represents a single log entry from the agent.
@@ -94,6 +94,14 @@ export class AgentLogger {
      */
     public logError(message: string, error?: unknown): void {
         this.log('error', message, error);
+    }
+
+    /**
+     * Log code execution with full code content.
+     */
+    public logCodeExecution(code: string, result?: unknown): void {
+        const preview = code.length > 200 ? code.substring(0, 200) + '...' : code;
+        this.log('code_execution', preview, { code, result });
     }
 
     /**

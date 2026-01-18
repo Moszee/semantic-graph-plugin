@@ -2,8 +2,12 @@ import * as vscode from 'vscode';
 import { IntentGraphPanel } from './ui/IntentGraphPanel';
 import { IntentsTreeDataProvider } from './ui/IntentsTreeDataProvider';
 import { GraphStore } from './store/GraphStore';
-import { PlanningAgent, generateImplementationInstructions } from './agent/PlanningAgent';
+import { PlanningAgent } from './agent/PlanningAgent';
+import { generatePlanningInstructions } from './agent/planningInstructions';
 import { Logger } from './lib/Logger';
+import { MCPServer } from './mcp/MCPServer';
+
+let mcpServer: MCPServer | null = null;
 
 export function activate(context: vscode.ExtensionContext) {
     // Initialize logger first
@@ -12,6 +16,12 @@ export function activate(context: vscode.ExtensionContext) {
 
     const graphStore = new GraphStore();
     const planningAgent = new PlanningAgent(graphStore);
+
+    // Initialize MCP Server for Antigravity integration
+    mcpServer = new MCPServer();
+    mcpServer.start().catch(error => {
+        Logger.error('Extension', 'Failed to start MCP server', error);
+    });
 
     // Register Tree View
     const intentsProvider = new IntentsTreeDataProvider(graphStore);
@@ -76,7 +86,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             Logger.info('Extension', 'Generating implementation instructions', { intentName: selectedIntent.name });
             // Generate instructions for Antigravity Agent
-            const instructions = generateImplementationInstructions(
+            const instructions = generatePlanningInstructions(
                 selectedIntent,
                 graphStore.getNodes()
             );
@@ -153,4 +163,11 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(watcher);
 }
 
-export function deactivate() { }
+export function deactivate() {
+    if (mcpServer) {
+        mcpServer.close().catch(error => {
+            console.error('Failed to close MCP server:', error);
+        });
+        mcpServer = null;
+    }
+}

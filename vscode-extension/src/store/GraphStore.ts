@@ -81,14 +81,30 @@ export class GraphStore {
     }
 
     /**
-     * Get merged nodes (current graph + selected intent delta).
+     * Get merged nodes (current graph + intent delta).
+     * @param intent Optional intent to apply (object or name). If undefined, returns base nodes.
      */
-    getMergedNodes(): IntentNode[] {
-        if (!this.selectedIntent) {
+    getMergedNodes(intent?: GraphDelta | string): IntentNode[] {
+        let delta: GraphDelta | undefined;
+
+        if (typeof intent === 'string') {
+            delta = this.intents.find(i => i.name === intent);
+            if (!delta) {
+                Logger.warn('GraphStore', 'Intent not found for merging', { intentName: intent });
+            }
+        } else {
+            delta = intent;
+        }
+
+        if (!delta) {
+            // Fallback to selected intent if no explicit intent provided? 
+            // User said: "getMergedNodes should get selected intent name as a parameter... Store should be just a store... logic should be kept higher."
+            // So if no intent passed, we return BASE nodes (or whatever 'this.query.applyDelta(undefined)' does? No, query applies delta).
+            // Let's assume undefined intent -> Base nodes.
             return this.getNodes();
         }
 
-        const mergedGraph = this.query.applyDelta(this.selectedIntent);
+        const mergedGraph = this.query.applyDelta(delta);
         return Array.from(mergedGraph.nodes.values());
     }
 

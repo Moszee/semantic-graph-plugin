@@ -507,6 +507,13 @@ body {
     margin-bottom: 8px;
 }
 
+.empty-state-hint {
+    margin-top: 16px;
+    font-size: 12px;
+    font-style: italic;
+    color: var(--text-secondary);
+}
+
 .zoom-controls {
     position: absolute;
     bottom: 16px;
@@ -681,4 +688,35 @@ body {
 
 .log-type-error .log-message {
     color: var(--accent-red);
+}
+
+/* Intent Prompt Panel */
+.intent-prompt-panel {
+    padding: 16px;
+}
+
+.intent-prompt-header {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 12px;
+}
+
+.intent-prompt-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.intent-prompt-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.intent-prompt-description {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
 }

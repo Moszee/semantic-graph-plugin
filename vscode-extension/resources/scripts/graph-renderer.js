@@ -12,13 +12,22 @@ function renderNodes(nodes, deltaNodeIds) {
     graph.innerHTML = '';
 
     if (nodes.length === 0) {
-        // Only show empty state if no intent is selected
-        // This allows creating new nodes in an empty graph when an intent is active
+        // Show empty state message based on whether an intent is selected
         if (!window.GRAPH_DATA || !window.GRAPH_DATA.selectedIntent) {
             graph.innerHTML = `
                 <div class="empty-state">
                     <h2>No nodes yet</h2>
                     <p>Create a .intent-graph/nodes directory with YAML files to get started.</p>
+                </div>
+            `;
+        } else {
+            // Show intent info when graph is empty but intent is selected
+            const intent = window.GRAPH_DATA.selectedIntent;
+            graph.innerHTML = `
+                <div class="empty-state">
+                    <h2>Intent: ${intent.name}</h2>
+                    <p>${intent.description || 'No description'}</p>
+                    <p class="empty-state-hint">This intent has no nodes yet. Use the AI prompt to add nodes to this intent.</p>
                 </div>
             `;
         }

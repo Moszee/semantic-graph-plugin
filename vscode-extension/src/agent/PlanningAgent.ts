@@ -24,7 +24,6 @@ export class PlanningAgent {
     private tools: AiAgentTools;
 
     constructor(store: GraphStore) {
-        ``
         this.store = store;
         this.aiClient = AiAgentClient.getInstance();
         this.tools = new AiAgentTools(store, this.spawnSubAgent.bind(this));
@@ -111,6 +110,101 @@ export class PlanningAgent {
     }
 
     /**
+     * Refine an existing intent based on user prompt.
+     * Allows modifying the entire intent with new operations.
+     */
+    async refineIntent(intent: GraphDelta, userPrompt: string): Promise<GraphDelta | null> {
+        Logger.info('PlanningAgent', 'Refining intent with AI', { intentName: intent.name, userPrompt });
+
+        const model = this.aiClient.getModel();
+        const client = this.aiClient.createClient();
+        const tools = this.tools.getPlanningTools();
+
+        Logger.debug('PlanningAgent', 'Using model for intent refinement', { model, operationCount: intent.operations.length });
+
+        // Generate graph summary for tool context
+        const graphSummary = this.generateMergedGraphSummary();
+
+        // Build current intent summary
+        const intentSummary = intent.operations.map(op =>
+            `- [${op.operation}] ${op.node.id} (${op.node.type}): ${op.node.name}`
+        ).join('\n');
+
+        // System prompt for intent refinement
+        const systemPrompt = `You are an Intent Graph architect. Refine the given intent based on user request.
+
+# CURRENT INTENT
+Name: ${intent.name}
+Description: ${intent.description}
+
+## Current Operations
+${intentSummary || '(no operations yet)'}
+
+## Available Tools
+- get_node(id): Get full details of a node by its ID
+- get_subgraph(entryPointId): Get all nodes reachable from an entry point
+- find_nodes(filters): Find nodes by entry point filters
+
+${graphSummary}
+
+# RULES
+1. [MUST] Return valid JSON (JSON mode is enabled)
+2. [MUST] Use unique, descriptive IDs for new nodes (snake_case)
+3. [MUST] Ensure inputs/outputs references are consistent across all nodes
+4. [MUST] If the user references a node, use get_node to fetch its details first
+5. [SHOULD] Use tools to explore related nodes before making changes
+6. [AVOID] Quotation marks (" or ') in descriptions and names
+
+# OUTPUT FORMAT
+Return a valid JSON GraphDelta object with new/updated operations to apply to the intent.`;
+
+        const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+        ];
+
+        try {
+            Logger.info('PlanningAgent', 'Sending intent refinement request to OpenAI API');
+            AgentLogger.getInstance().logPromptSent('intent-refinement', { intentName: intent.name, userPrompt });
+
+            const content = await this.aiClient.chatWithTools(
+                messages,
+                tools,
+                async (name, args) => {
+                    AgentLogger.getInstance().logToolCall(name, args);
+                    return await this.tools.executeTool(name, args, intent);
+                },
+                {
+                    context: 'intent refinement request',
+                    jsonMode: true,
+                    showNotifications: true
+                }
+            );
+
+            const delta = this.parseIntentFromResponse(content);
+            if (delta) {
+                Logger.info('PlanningAgent', 'Successfully parsed delta for intent refinement', {
+                    deltaName: delta.name,
+                    operationCount: delta.operations?.length || 0
+                });
+            } else {
+                Logger.warn('PlanningAgent', 'Failed to parse delta from intent refinement response', { content });
+            }
+            AgentLogger.getInstance().logResponseReceived(
+                delta ? `Refined: ${delta.name}` : 'Failed to parse response',
+                { content }
+            );
+            return delta;
+
+        } catch (error) {
+            Logger.error('PlanningAgent', 'Agent error during intent refinement', error);
+            AgentLogger.getInstance().logError('Intent refinement failed', error);
+            vscode.window.showErrorMessage(`Agent error: ${error}`);
+            return null;
+        }
+    }
+
+    /**
      * Tweak an existing node based on user prompt.
      * Supports tool calling to query both base graph and current delta.
      */
@@ -149,7 +243,7 @@ export class PlanningAgent {
             systemPrompt = fillTemplate(promptTemplate, {
                 'FOCAL_NODE': JSON.stringify(node, null, 2),
                 'CONNECTED_NODES': connectedNodes.length > 0
-                    ? JSON.stringify(connectedNodes, null, 2)
+                    ? connectedNodes.map(n => `- ${n.id} (${n.type}): ${n.name}`).join('\n')
                     : '(no connected nodes)',
                 'GRAPH_SUMMARY': graphSummary
             });
@@ -159,7 +253,7 @@ export class PlanningAgent {
             systemPrompt = `You are an Intent Graph architect. Refine the node based on user request. Return a valid JSON GraphDelta.
 
 Focal node: ${JSON.stringify(node, null, 2)}
-Connected nodes: ${connectedNodes.length > 0 ? JSON.stringify(connectedNodes, null, 2) : '(none)'}
+Connected nodes (use get_node to get full details): ${connectedNodes.length > 0 ? connectedNodes.map(n => `${n.id} (${n.type}): ${n.name}`).join(', ') : '(none)'}
 
 ${graphSummary}`;
         }

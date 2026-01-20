@@ -16,7 +16,7 @@ You have access to tools to explore the graph. Use them to understand the contex
 
 {{FOCAL_NODE}}
 
-## Connected Nodes
+## Connected Nodes (Summary)
 
 {{CONNECTED_NODES}}
 
@@ -57,10 +57,11 @@ You have access to tools to explore the graph. Use them to understand the contex
 3. [MUST] Use unique, descriptive IDs for new nodes (snake_case)
 4. [MUST] Ensure inputs/outputs references are consistent across all nodes
 5. [MUST] Add `questions` for anything uncertain about the refinement
-6. [SHOULD] Use tools to explore related nodes before making changes
-7. [SHOULD] Think about supporting nodes needed to fulfill the request
-8. [AVOID] Quotation marks (" or ') in descriptions and names
-9. [AVOID] Colons (:) except in URLs or paths
+6. [MUST] If the user mentions or references ANY node by ID or name (other than the focal node), you MUST call `get_node` to retrieve its full details first (if it is not already in the connected nodes)
+7. [MUST] If the user asks about relationships or connected components, use `get_subgraph` or `find_nodes` to explore the graph if it is not already in the connected nodes
+8. [SHOULD] Think about supporting nodes needed to fulfill the request
+9. [AVOID] Quotation marks (" or ') in descriptions and names
+10. [AVOID] Colons (:) except in URLs or paths
 
 # OUTPUT FORMAT
 
@@ -68,4 +69,3 @@ Return a valid JSON GraphDelta object with:
 - `name`: Descriptive name for this refinement
 - `description`: Summary of changes being made
 - `operations`: Array of add/update/remove operations
-

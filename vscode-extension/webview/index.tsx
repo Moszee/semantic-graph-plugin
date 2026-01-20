@@ -2,7 +2,9 @@ import { h, render } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 import { IntentNode, AgentLogEntry } from './types';
 import { NodeDetailsContainer } from './containers/NodeDetailsContainer';
+import { IntentPromptView } from './components/IntentPromptView';
 import { LogPanelView } from './components/LogPanelView';
+import { postVSCodeMessage } from './hooks/useVSCodeMessage';
 
 function App() {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -10,6 +12,8 @@ function App() {
     const [selectedIntent, setSelectedIntent] = useState<any>(null);
     const [deltaNodeIds, setDeltaNodeIds] = useState<Set<string>>(new Set());
     const [logs, setLogs] = useState<AgentLogEntry[]>([]);
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [isAiLoading, setIsAiLoading] = useState(false);
 
     useEffect(() => {
         // Load initial data from window
@@ -79,7 +83,23 @@ function App() {
                 <div class="canvas-container" id="canvasContainer">
                     <div class="graph-wrapper" id="graphWrapper">
                         <svg id="edges-svg">
-                            {/* SVG markers defined here */}
+                            <defs>
+                                <marker id="arrowhead-default" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                                    <polygon points="0 0, 10 3.5, 0 7" fill="#555555" />
+                                </marker>
+                                <marker id="arrowhead-uses" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                                    <polygon points="0 0, 10 3.5, 0 7" fill="#4fc3f7" />
+                                </marker>
+                                <marker id="arrowhead-triggers" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                                    <polygon points="0 0, 10 3.5, 0 7" fill="#ff8a65" />
+                                </marker>
+                                <marker id="arrowhead-filters" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                                    <polygon points="0 0, 10 3.5, 0 7" fill="#aed581" />
+                                </marker>
+                                <marker id="arrowhead-produces" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                                    <polygon points="0 0, 10 3.5, 0 7" fill="#ba68c8" />
+                                </marker>
+                            </defs>
                         </svg>
                         <div id="graph">
                             {nodes.length === 0 && !selectedIntent && (
@@ -88,21 +108,73 @@ function App() {
                                     <p>Create a .intent-graph/nodes directory with YAML files to get started.</p>
                                 </div>
                             )}
+                            {nodes.length === 0 && selectedIntent && (
+                                <div class="empty-state">
+                                    <h2>Intent: {selectedIntent.name}</h2>
+                                    <p>{selectedIntent.description || 'No description'}</p>
+                                    <p class="empty-state-hint">This intent has no nodes yet. Use the AI prompt to add nodes to this intent.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* Details Panel */}
-                <div class="details-panel" id="detailsPanel" style={{ display: selectedNode ? 'block' : 'none' }}>
-                    <div class="details-header">
-                        <h3>Node Details</h3>
-                        <button class="close-btn" onClick={() => setSelectedNodeId(null)}>
-                            ×
-                        </button>
-                    </div>
-                    {selectedNode && (
-                        <NodeDetailsContainer node={selectedNode} isEditable={isEditable} />
-                    )}
+                {/* Details Panel - shows Node Details or Intent Prompt */}
+                <div class="details-panel" id="detailsPanel" style={{ display: (selectedNode || selectedIntent) ? 'block' : 'none' }}>
+                    {selectedNode ? (
+                        <>
+                            <div class="details-header">
+                                <h3>Node Details</h3>
+                                <button class="close-btn" onClick={() => setSelectedNodeId(null)}>
+                                    ×
+                                </button>
+                            </div>
+                            <NodeDetailsContainer
+                                node={selectedNode}
+                                isEditable={isEditable}
+                                aiPrompt={aiPrompt}
+                                isAiLoading={isAiLoading}
+                                onAiPromptChange={setAiPrompt}
+                                onAiLoadingChange={setIsAiLoading}
+                            />
+                        </>
+                    ) : selectedIntent ? (
+                        <IntentPromptView
+                            intentName={selectedIntent.name}
+                            value={aiPrompt}
+                            isLoading={isAiLoading}
+                            onChange={setAiPrompt}
+                            onSubmit={() => {
+                                if (!aiPrompt.trim()) return;
+                                setIsAiLoading(true);
+                                postVSCodeMessage({
+                                    command: 'refineIntent',
+                                    intentName: selectedIntent.name,
+                                    prompt: aiPrompt,
+                                });
+                                setTimeout(() => {
+                                    setIsAiLoading(false);
+                                    setAiPrompt('');
+                                }, 2000);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.ctrlKey && e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (!aiPrompt.trim()) return;
+                                    setIsAiLoading(true);
+                                    postVSCodeMessage({
+                                        command: 'refineIntent',
+                                        intentName: selectedIntent.name,
+                                        prompt: aiPrompt,
+                                    });
+                                    setTimeout(() => {
+                                        setIsAiLoading(false);
+                                        setAiPrompt('');
+                                    }, 2000);
+                                }
+                            }}
+                        />
+                    ) : null}
                 </div>
             </div>
 

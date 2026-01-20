@@ -29,7 +29,12 @@
             // Draw edges after a short delay to ensure DOM is ready
             setTimeout(() => {
                 drawEdges(window.GRAPH_DATA.nodes, getNodePositions());
-            }, 100);
+            }, 150);
+
+            // Redraw edges again after a longer delay to catch any late-rendering nodes
+            setTimeout(() => {
+                drawEdges(window.GRAPH_DATA.nodes, getNodePositions());
+            }, 500);
         }
 
         // Set up event listeners

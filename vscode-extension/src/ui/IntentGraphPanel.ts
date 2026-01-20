@@ -90,6 +90,14 @@ export class IntentGraphPanel {
                         // Handle AI-powered node tweaking
                         this._handleNodeTweak(message.nodeId, message.prompt);
                         break;
+                    case 'refineIntent':
+                        Logger.info('IntentGraphPanel', 'Intent refinement requested from webview', {
+                            intentName: message.intentName,
+                            promptLength: message.prompt?.length || 0
+                        });
+                        // Handle AI-powered intent refinement
+                        this._handleIntentRefine(message.intentName, message.prompt);
+                        break;
                     default:
                         Logger.warn('IntentGraphPanel', 'Unknown webview command received', { command: message.command });
                         break;
@@ -230,6 +238,77 @@ export class IntentGraphPanel {
         }
     }
 
+    private async _handleIntentRefine(intentName: string, prompt: string) {
+        Logger.info('IntentGraphPanel', 'Processing AI intent refinement request', { intentName, prompt });
+
+        const selectedIntent = this._store.getSelectedIntent();
+        if (!selectedIntent || selectedIntent.name !== intentName) {
+            Logger.warn('IntentGraphPanel', 'Intent refinement attempted with mismatched intent', { intentName });
+            vscode.window.showWarningMessage('Please select the intent before refining it.');
+            return;
+        }
+
+        try {
+            // Import PlanningAgent dynamically to avoid circular dependencies
+            const { PlanningAgent } = await import('../agent/PlanningAgent.js');
+            const agent = new PlanningAgent(this._store);
+
+            // Show progress to user
+            vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: 'AI is refining the intent...',
+                cancellable: false
+            }, async () => {
+                const delta = await agent.refineIntent(selectedIntent, prompt);
+
+                if (delta && delta.operations && delta.operations.length > 0) {
+                    Logger.info('IntentGraphPanel', 'AI successfully generated delta for intent refinement', {
+                        deltaName: delta.name,
+                        operationCount: delta.operations.length
+                    });
+
+                    // Merge AI's delta operations into the existing selected intent
+                    for (const newOp of delta.operations) {
+                        // Find existing operation for the same node
+                        const existingOpIndex = selectedIntent.operations.findIndex(
+                            op => op.node.id === newOp.node.id
+                        );
+
+                        if (existingOpIndex !== -1) {
+                            // Update existing operation with new node data
+                            Logger.debug('IntentGraphPanel', 'Merging operation into existing', {
+                                nodeId: newOp.node.id,
+                                operation: newOp.operation
+                            });
+                            selectedIntent.operations[existingOpIndex] = newOp;
+                        } else {
+                            // Add new operation to the intent
+                            Logger.debug('IntentGraphPanel', 'Adding new operation to intent', {
+                                nodeId: newOp.node.id,
+                                operation: newOp.operation
+                            });
+                            selectedIntent.operations.push(newOp);
+                        }
+                    }
+
+                    // Save the updated intent
+                    this._store.saveIntent(selectedIntent);
+
+                    // Refresh the view
+                    this._update();
+
+                    vscode.window.showInformationMessage(`Intent refined successfully: ${selectedIntent.name}`);
+                } else {
+                    Logger.warn('IntentGraphPanel', 'AI failed to generate delta for intent refinement');
+                    vscode.window.showWarningMessage('AI could not process the refinement request. Please try again.');
+                }
+            });
+        } catch (error) {
+            Logger.error('IntentGraphPanel', 'Error handling intent refinement', error);
+            vscode.window.showErrorMessage(`Failed to refine intent: ${error}`);
+        }
+    }
+
     public dispose() {
         Logger.debug('IntentGraphPanel', 'Disposing Intent Graph panel');
         IntentGraphPanel.currentPanel = undefined;
@@ -249,8 +328,8 @@ export class IntentGraphPanel {
     }
 
     private _getHtmlForWebview(webview: vscode.Webview): string {
-        const nodes = this._store.getMergedNodes();
         const selectedIntent = this._store.getSelectedIntent();
+        const nodes = this._store.getMergedNodes(selectedIntent ?? undefined);
 
         // Get IDs of nodes that belong to the selected delta (editable)
         const deltaNodeIds = new Set<string>();
